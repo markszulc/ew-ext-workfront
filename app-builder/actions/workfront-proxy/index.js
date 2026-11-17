@@ -81,7 +81,10 @@ async function findUsername(email, { host, version, adminKey, fetchImpl }) {
   url.searchParams.set('apiKey', adminKey);
   const resp = await fetchImpl(url, { headers: { Accept: 'application/json' } });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) return { error: data?.error?.message || `HTTP ${resp.status}` };
+  if (!resp.ok) {
+    const msg = data?.error?.message || `HTTP ${resp.status}`;
+    return { error: resp.status === 401 || /not currently logged in/i.test(msg) ? `Workfront rejected WF_ADMIN_API_KEY (invalid, expired or not deployed): ${msg}` : msg };
+  }
   const users = data?.data || [];
   if (users.length !== 1) return { error: users.length ? 'more than one active user has this email' : 'no active user has this email' };
   return { username: users[0].username };

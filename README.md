@@ -192,6 +192,7 @@ Open a page in Experience Workspace and choose **Workfront** in the side panel. 
 | `401 Missing IMS token` in the panel | The panel isn't running inside Experience Workspace, so it has no token. Open it from the da.live side panel. |
 | `401 Invalid or expired IMS token` | Sign out of da.live and sign back in. |
 | `403 … is not allowed to use this proxy` | The author's email domain isn't listed in `ALLOWED_EMAIL_DOMAINS`. |
+| `… Workfront rejected WF_ADMIN_API_KEY` or `You are not currently logged in` | Test the key directly: `curl "https://<host>.my.workfront.com/attask/api/v19.0/user/search?fields=username,emailAddr&apiKey=<key>"`. If that also fails, generate a new key (step 4). If it works, the deployed value is wrong: check `.env` for typos and quotes, run `aio app deploy`, and confirm with `aio rt action get workfront/proxy`. |
 | `403 Couldn't sign in to Workfront as …` | The proxy tries the author's email as their Workfront username, then looks up an active user whose email address matches. The message includes Workfront's reason. Common fixes: set the author's Workfront email address to match their Adobe ID, check that the user is active, and check that the admin API key is valid and hasn't expired. |
 | `500 WF_HOST / WF_ADMIN_API_KEY is not configured` | The setting is missing from `.env`. Add it and run `aio app deploy` again. |
 | A CORS error in the browser console | The page's origin isn't in `ALLOWED_ORIGINS`. Add it and run `aio app deploy` again. |
