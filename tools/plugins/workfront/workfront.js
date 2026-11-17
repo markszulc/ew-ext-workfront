@@ -500,17 +500,20 @@ function renderDetailView() {
         render();
       },
     }, 'checkCircle') : null,
-    actions?.setPrompt ? button('Ask Assistant', {
+    actions?.setPrompt ? button('Ask Coworker', {
       class: 'primary outline',
-      title: 'Open the Assistant with this task as context',
+      title: 'Ask Coworker to help complete this task',
       onClick: () => {
+        const name = (form.querySelector('[name=name]')?.value || task.name || '').trim();
+        const description = (form.querySelector('[name=description]')?.value ?? task.description ?? '').trim();
         const prompt = [
-          `I'm working on the Workfront task "${task.name}" (project: ${task.project?.name || 'n/a'}, due ${formatDate(task.plannedCompletionDate)}).`,
-          task.description ? `Task details: ${task.description}` : '',
-          'Help me complete it on the page I have open. Suggest the changes first and wait for my confirmation before editing.',
+          `Coworker, please help me complete this Workfront task on the page I have open.`,
+          `Task: ${name}`,
+          description ? `Description:\n${description}` : '',
+          'Suggest the changes first and wait for my confirmation before editing.',
         ].filter(Boolean).join('\n\n');
         actions.setPrompt(prompt, { autoSend: false });
-        toast('Sent to the Assistant — review and press send.', 'success');
+        toast('Sent to Coworker — review and press send.', 'success');
       },
     }, 'assistant') : null,
     url ? h('a', {

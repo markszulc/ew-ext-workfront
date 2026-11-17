@@ -15,7 +15,7 @@ Vanilla JS, no build step, no dependencies. It follows the
 | **Complete** | One click from the list or the details view (`status=CPL`, `percentComplete=100`) |
 | **Create** | Choose a project, set a due date and priority, assign the task to yourself, and optionally link the page you're editing |
 | **Permissions** | Uses your Workfront license and access level for tasks to hide edit and create actions. Workfront still has the final say: if it returns a 403, the task becomes 🔒 view-only |
-| **Ask Assistant** | Puts the task into the Experience Workspace Assistant prompt with `actions.setPrompt`. You review it before sending |
+| **Ask Coworker** | Puts a prompt into Coworker (`actions.setPrompt`) asking it to help complete the task, using the task's name and description (including unsaved edits). You review it before sending |
 
 ## Files
 

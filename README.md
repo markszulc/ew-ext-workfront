@@ -14,7 +14,7 @@ A side-panel extension for [Experience Workspace](https://www.aem.live/docs/ew/d
 - Edit name, status, priority, progress, due date and description
 - Complete a task in one click
 - Create tasks in a project, optionally linked to the page you're editing
-- Send a task to the Experience Workspace Assistant prompt
+- Ask Coworker to help complete a task, using its name and description
 
 ## Repository layout
 
