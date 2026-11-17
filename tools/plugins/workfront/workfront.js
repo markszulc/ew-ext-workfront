@@ -262,7 +262,7 @@ function renderHeader() {
   return h(
     'header',
     { class: 'wf-header' },
-    h('h1', {}, 'Workfront'),
+    h('h1', {}, 'Adobe Workfront'),
     state.config?.mode === 'demo' ? h('span', { class: 'wf-badge' }, 'Demo') : null,
     h('span', { class: 'wf-spacer' }),
     user,
