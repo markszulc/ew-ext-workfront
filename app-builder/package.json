@@ -1,0 +1,12 @@
+{
+  "name": "workfront-panel-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App Builder proxy for the Experience Workspace Workfront side panel",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "deploy": "aio app deploy"
+  }
+}

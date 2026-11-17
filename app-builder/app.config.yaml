@@ -1,0 +1,24 @@
+application:
+  runtimeManifest:
+    packages:
+      workfront:
+        license: Apache-2.0
+        actions:
+          proxy:
+            function: actions/workfront-proxy/index.js
+            runtime: nodejs:20
+            web: 'yes'
+            annotations:
+              raw-http: true
+              # The action checks the IMS token itself, because the DA token's client ID
+              # isn't this project's client ID.
+              require-adobe-auth: false
+              web-custom-options: true
+              final: true
+            inputs:
+              LOG_LEVEL: info
+              WF_HOST: $WF_HOST
+              WF_AUTH_STRATEGY: $WF_AUTH_STRATEGY
+              WF_ADMIN_API_KEY: $WF_ADMIN_API_KEY
+              ALLOWED_ORIGINS: $ALLOWED_ORIGINS
+              ALLOWED_EMAIL_DOMAINS: $ALLOWED_EMAIL_DOMAINS
