@@ -86,6 +86,8 @@ Save the config, open a page in Canvas, and choose **Workfront** from the side-p
 
 ## Production proxy (App Builder)
 
+New to App Builder? Follow the [step-by-step setup guide](../../../README.md#set-up-the-production-proxy-app-builder) in the main README.
+
 The `app-builder/` action handles each request like this:
 1. It checks the author's IMS token against IMS (`/ims/profile/v1`) to get their email.
 2. It optionally checks the email against `ALLOWED_EMAIL_DOMAINS`.
