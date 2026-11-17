@@ -40,7 +40,7 @@ The panel uses the same Spectrum 2 building blocks as Experience Workspace (da.l
 
 - `https://da.live/nx2/styles/styles.css`: S2 tokens (`--s2-*`) and Adobe Clean fonts
 - `https://da.live/nx2/styles/buttons.css`: action/icon button classes (`nx-action-btn-*`)
-- `https://da.live/nx2/public/sl/components.js`: form components `sl-input`, `sl-textarea`, `sl-select`, `sl-checkbox`, `sl-button`
+- `https://da.live/nx2/public/sl/components.js`: form components `sl-input`, `sl-select`, `sl-checkbox`, `sl-button`
 - S2 icons (`S2_Icon_*_20_N.svg`) from da.live's nx2/nx icon folders, applied as CSS masks
 
 These are internal da.live assets rather than a published package, so they can change without notice. If one breaks, pin a copy under `tools/plugins/workfront/vendor/`.

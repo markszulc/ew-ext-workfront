@@ -1,6 +1,6 @@
 /* eslint-disable import/no-unresolved */
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
-// Spectrum 2 form components used by Experience Workspace: sl-input, sl-select, sl-textarea, sl-checkbox, sl-button
+// Spectrum 2 form components used by Experience Workspace: sl-input, sl-select, sl-checkbox, sl-button
 import 'https://da.live/nx2/public/sl/components.js';
 import {
   createWorkfrontClient,
@@ -105,10 +105,21 @@ function input(name, text, attrs = {}) {
   });
 }
 
+// Native textarea styled like sl-* fields. sl-textarea is absolutely positioned and uses the
+// field height as line-height, so it can't grow with its content.
+function fitTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight + 4}px`;
+}
+
 function textarea(name, text, attrs = {}) {
-  return h('sl-textarea', {
-    name, id: name, label: text, value: '', ...attrs,
+  const { value = '', ...rest } = attrs;
+  const area = h('textarea', {
+    name, id: name, class: 'wf-textarea', ...rest, onInput: (e) => fitTextarea(e.target),
   });
+  area.value = value;
+  requestAnimationFrame(() => fitTextarea(area));
+  return h('div', { class: 'wf-field' }, h('label', { class: 'wf-label', for: name }, text), area);
 }
 
 function select(name, text, options, current, attrs = {}) {
@@ -429,7 +440,7 @@ function renderDetailView() {
       ),
     ),
     input('plannedCompletionDate', 'Due date', { type: 'date', value: toDateInput(task.plannedCompletionDate), disabled: off }),
-    textarea('description', 'Description', { rows: '4', value: task.description || '', disabled: off }),
+    textarea('description', 'Description', { rows: '5', value: task.description || '', disabled: off }),
     editable ? h('div', { class: 'wf-actions' }, saveBtn) : null,
   );
 
@@ -519,7 +530,8 @@ function renderDetailView() {
 
   const updatesList = h('ul', { class: 'wf-updates' }, h('li', { class: 'wf-empty' }, 'Loading updates…'));
   loadUpdates(task, updatesList);
-  const noteInput = textarea('note', 'New update', { rows: '2', placeholder: 'Write an update…' });
+  const noteField = textarea('note', 'New update', { rows: '2', placeholder: 'Write an update…' });
+  const noteInput = noteField.querySelector('textarea');
   const updateForm = state.caps?.canComment ? h(
     'form',
     {
@@ -533,6 +545,7 @@ function renderDetailView() {
         try {
           await state.client.addUpdate(task.ID, text);
           noteInput.value = '';
+          fitTextarea(noteInput);
           toast('Update posted', 'success');
           await loadUpdates(task, updatesList);
         } catch (err) {
@@ -541,7 +554,7 @@ function renderDetailView() {
         btn.disabled = false;
       },
     },
-    noteInput,
+    noteField,
     button('Post update', { type: 'submit', class: 'primary outline' }),
   ) : null;
 
@@ -581,7 +594,7 @@ function renderCreateView() {
       input('plannedCompletionDate', 'Due date', { type: 'date' }),
       select('new-priority', 'Priority', PRIORITIES, 2),
     ),
-    textarea('description', 'Description', { rows: '4' }),
+    textarea('description', 'Description', { rows: '5' }),
     links ? h('sl-checkbox', { name: 'linkPage', checked: true }, 'Link to the page I’m editing') : null,
     h('sl-checkbox', { name: 'assignMe', checked: true }, 'Assign to me'),
     h('div', { class: 'wf-actions' }, button('Create task', { type: 'submit' })),

@@ -121,8 +121,38 @@ sl-button { display: inline-block; }
 sl-button .wf-icon { width: 18px; height: 18px; }
 
 sl-select,
-sl-input,
-sl-textarea { min-width: 0; }
+sl-input { min-width: 0; }
+
+.wf-textarea {
+  display: block;
+  width: 100%;
+  min-height: calc(var(--rows, 5) * 1.5em + 20px);
+  padding: 8px 12px;
+  overflow: hidden;
+  font-family: var(--s2-font-family);
+  font-size: var(--s2-component-m-regular-font-size);
+  line-height: 1.5;
+  color: var(--s2-gray-800);
+  resize: none;
+  background: var(--s2-gray-50);
+  border: 2px solid var(--s2-gray-200);
+  border-radius: var(--s2-corner-radius-500);
+  outline-color: var(--s2-blue-900);
+  outline-offset: 0;
+  transition: outline-offset 0.2s;
+}
+
+.wf-textarea[rows='2'] { --rows: 2; }
+
+.wf-textarea:focus-visible { outline-offset: 4px; }
+
+.wf-textarea::placeholder { color: var(--s2-gray-500); }
+
+.wf-textarea:disabled {
+  color: var(--s2-gray-500);
+  background: var(--s2-gray-75);
+  border-color: transparent;
+}
 
 .wf-label {
   display: block;
