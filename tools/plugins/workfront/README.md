@@ -96,7 +96,7 @@ The `app-builder/` action handles each request like this:
 ```bash
 cd app-builder
 cp .env.example .env     # set WF_HOST, WF_ADMIN_API_KEY, ALLOWED_EMAIL_DOMAINS
-aio app use              # choose your App Builder project/workspace
+aio app use ~/Downloads/<org>-<project>-Stage.json   # workspace JSON from Developer Console › Download all
 aio app deploy           # prints the action URL
 ```
 

@@ -96,15 +96,19 @@ A workspace is an isolated environment with its own URL. Use **Stage** for testi
 
 ### Step 3: Connect this folder to the project
 
-```bash
-git clone https://github.com/markszulc/ew-ext-workfront.git
-cd ew-ext-workfront/app-builder
-aio app use
-```
+1. In the [Developer Console](https://developer.adobe.com/console), open your project and select the **Stage** workspace.
+2. Choose **Download all** (top right). This downloads a workspace configuration file named something like `<org>-<project>-Stage.json`.
+3. Connect this folder to that workspace using the file:
 
-`aio app use` prompts you to choose an organization, then the project, then a workspace (start with **Stage**). It writes your deployment credentials to `app-builder/.env` and `app-builder/.aio`. Both are git-ignored, so never commit them. If it asks about an existing `.env`, choose **Merge**.
+   ```bash
+   git clone https://github.com/markszulc/ew-ext-workfront.git
+   cd ew-ext-workfront/app-builder
+   aio app use ~/Downloads/<org>-<project>-Stage.json
+   ```
 
-> If you'd rather not use the prompts: in the Developer Console, open the project, select the **Stage** workspace, choose **Download all**, and then run `aio app use ~/Downloads/<file>.json`.
+`aio app use` writes your deployment credentials to `app-builder/.env` and `app-builder/.aio`. Both are git-ignored, so never commit them. If it asks about an existing `.env`, choose **Merge**.
+
+The downloaded JSON file contains credentials. Delete it, or keep it somewhere safe outside the repo.
 
 ### Step 4: Create a Workfront admin API key
 
@@ -178,7 +182,7 @@ Open a page in Experience Workspace and choose **Workfront** in the side panel. 
 |---|---|
 | Redeploy after changing code or `.env` | `aio app deploy` |
 | See recent requests and errors | `aio app logs`, or `aio rt activation list` and then `aio rt activation logs <id>` |
-| Deploy to production | `aio app use` and choose the **Production** workspace, add your `WF_…` settings to `.env` again, then run `aio app deploy`. Production gets its own URL. |
+| Deploy to production | In the Developer Console, select the **Production** workspace and choose **Download all**. Run `aio app use ~/Downloads/<org>-<project>-Production.json`, add your `WF_…` settings to `.env` again, then run `aio app deploy`. Production gets its own URL. |
 | Remove the deployment | `aio app undeploy` |
 
 ### Troubleshooting
@@ -191,7 +195,7 @@ Open a page in Experience Workspace and choose **Workfront** in the side panel. 
 | `403 No active Workfront user for …` | No active Workfront user has a username matching the author's Adobe ID email, or admin-key login is disabled on your Workfront instance. |
 | `500 WF_HOST / WF_ADMIN_API_KEY is not configured` | The setting is missing from `.env`. Add it and run `aio app deploy` again. |
 | A CORS error in the browser console | The page's origin isn't in `ALLOWED_ORIGINS`. Add it and run `aio app deploy` again. |
-| `aio app deploy` says no workspace or credentials | Run `aio app use` from inside the `app-builder/` folder. |
+| `aio app deploy` says no workspace or credentials | Run `aio app use <downloaded workspace JSON>` from inside the `app-builder/` folder (see step 3). |
 | App Builder doesn't appear in the Developer Console | Your organization isn't entitled to App Builder, or the wrong organization is selected. |
 
 ## Documentation

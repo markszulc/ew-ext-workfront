@@ -3,3 +3,6 @@ node_modules/
 dist/
 .aio
 .DS_Store
+# App Builder workspace configs (contain credentials)
+*-Stage.json
+*-Production.json
