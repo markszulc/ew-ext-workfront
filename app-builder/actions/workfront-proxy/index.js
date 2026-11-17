@@ -60,18 +60,47 @@ async function getImsProfile(token, fetchImpl) {
   return profile;
 }
 
-async function getWorkfrontSession(email, { host, version, adminKey, fetchImpl }) {
-  const hit = cached(sessionCache, email);
-  if (hit) return hit;
+async function wfLogin(username, { host, version, adminKey, fetchImpl }) {
   const url = new URL(`/attask/api/${version}/login`, host);
-  url.searchParams.set('username', email);
+  url.searchParams.set('username', username);
   url.searchParams.set('apiKey', adminKey);
   const resp = await fetchImpl(url, { method: 'POST', headers: { Accept: 'application/json' } });
   const data = await resp.json().catch(() => ({}));
   const sessionID = data?.data?.sessionID;
-  if (!resp.ok || !sessionID) return null;
-  sessionCache.set(email, { value: sessionID, expires: Date.now() + SESSION_TTL_MS });
-  return sessionID;
+  return sessionID ? { sessionID } : { error: data?.error?.message || `HTTP ${resp.status}` };
+}
+
+// The author's Workfront username may differ from their IMS email, so look it up by email address.
+async function findUsername(email, { host, version, adminKey, fetchImpl }) {
+  const url = new URL(`/attask/api/${version}/user/search`, host);
+  url.searchParams.set('emailAddr', email);
+  url.searchParams.set('emailAddr_Mod', 'cieq');
+  url.searchParams.set('isActive', 'true');
+  url.searchParams.set('fields', 'username');
+  url.searchParams.set('$$LIMIT', '2');
+  url.searchParams.set('apiKey', adminKey);
+  const resp = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) return { error: data?.error?.message || `HTTP ${resp.status}` };
+  const users = data?.data || [];
+  if (users.length !== 1) return { error: users.length ? 'more than one active user has this email' : 'no active user has this email' };
+  return { username: users[0].username };
+}
+
+async function getWorkfrontSession(email, opts) {
+  const hit = cached(sessionCache, email);
+  if (hit) return { sessionID: hit };
+  let result = await wfLogin(email, opts);
+  if (!result.sessionID) {
+    const found = await findUsername(email, opts);
+    if (found.username && found.username.toLowerCase() !== email) {
+      result = await wfLogin(found.username, opts);
+    } else {
+      result = { error: `login failed (${result.error}); user lookup: ${found.error || 'username is the same as the email'}` };
+    }
+  }
+  if (result.sessionID) sessionCache.set(email, { value: result.sessionID, expires: Date.now() + SESSION_TTL_MS });
+  return result;
 }
 
 function decodeBody(raw, headers) {
@@ -121,10 +150,10 @@ async function main(params, { fetchImpl = fetch } = {}) {
     outHeaders.Authorization = `Bearer ${token}`;
   } else {
     if (!params.WF_ADMIN_API_KEY) return json(500, cors, 'WF_ADMIN_API_KEY is not configured');
-    const sessionID = await getWorkfrontSession(email, {
+    const { sessionID, error } = await getWorkfrontSession(email, {
       host, version, adminKey: params.WF_ADMIN_API_KEY, fetchImpl,
     });
-    if (!sessionID) return json(403, cors, `No active Workfront user for ${email}`);
+    if (!sessionID) return json(403, cors, `Couldn't sign in to Workfront as ${email}: ${error}`);
     outHeaders.sessionID = sessionID;
   }
 

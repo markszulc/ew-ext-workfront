@@ -76,7 +76,7 @@ The code is in [`app-builder/actions/workfront-proxy/index.js`](app-builder/acti
 | An Adobe ID in an Adobe organization that is entitled to **App Builder** | Sign in at [developer.adobe.com/console](https://developer.adobe.com/console), select your organization (top right), and choose **Create project from template**. If **App Builder** is listed, you're entitled. If not, ask your Adobe admin or [request a trial](https://developer.adobe.com/app-builder/trial/). |
 | **Workfront administrator** access | Needed once, to generate the admin API key |
 | **Node.js 20 or later** | `node -v` |
-| **Matching emails:** each author's Adobe ID email must match their Workfront username | Spot-check a few users in Workfront under **Setup › People** |
+| **Matching emails:** each author's Adobe ID email must match their Workfront username or the email address on their Workfront user | Spot-check a few users in Workfront under **Setup › People** |
 
 ### Step 1: Install the Adobe I/O CLI
 
@@ -192,7 +192,7 @@ Open a page in Experience Workspace and choose **Workfront** in the side panel. 
 | `401 Missing IMS token` in the panel | The panel isn't running inside Experience Workspace, so it has no token. Open it from the da.live side panel. |
 | `401 Invalid or expired IMS token` | Sign out of da.live and sign back in. |
 | `403 … is not allowed to use this proxy` | The author's email domain isn't listed in `ALLOWED_EMAIL_DOMAINS`. |
-| `403 No active Workfront user for …` | No active Workfront user has a username matching the author's Adobe ID email, or admin-key login is disabled on your Workfront instance. |
+| `403 Couldn't sign in to Workfront as …` | The proxy tries the author's email as their Workfront username, then looks up an active user whose email address matches. The message includes Workfront's reason. Common fixes: set the author's Workfront email address to match their Adobe ID, check that the user is active, and check that the admin API key is valid and hasn't expired. |
 | `500 WF_HOST / WF_ADMIN_API_KEY is not configured` | The setting is missing from `.env`. Add it and run `aio app deploy` again. |
 | A CORS error in the browser console | The page's origin isn't in `ALLOWED_ORIGINS`. Add it and run `aio app deploy` again. |
 | `aio app deploy` says no workspace or credentials | Run `aio app use <downloaded workspace JSON>` from inside the `app-builder/` folder (see step 3). |

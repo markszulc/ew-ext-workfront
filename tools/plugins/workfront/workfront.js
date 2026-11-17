@@ -729,11 +729,11 @@ function render() {
     settings: renderSettingsView,
     error: renderErrorView,
   };
-  root.replaceChildren(
+  root.replaceChildren(...[
     renderHeader(),
     !state.sdk ? h('p', { class: 'wf-note wf-note-warn' }, 'Standalone mode: not connected to Experience Workspace.') : null,
     h('main', { class: `wf-body wf-view-${state.view}` }, views[state.view]()),
-  );
+  ].filter(Boolean));
   if (state.view === 'list') renderList();
 }
 
