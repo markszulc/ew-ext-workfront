@@ -10,7 +10,7 @@
  *                    Bearer token — every caller then acts as the key's owner, so
  *                    use it for local development only.
  *   ALLOWED_ORIGINS  Comma-separated origins allowed via CORS
- *                    (default: http://localhost:3000, https://da.live, *.aem.page, *.aem.live).
+ *                    (default: http://localhost:3000, https://da.live, https://markszulc.github.io, *.aem.page, *.aem.live).
  *   PORT             Default 8787.
  */
 import http from 'node:http';
@@ -21,7 +21,7 @@ if (!WF_HOST) {
   process.exit(1);
 }
 const target = new URL(WF_HOST.startsWith('http') ? WF_HOST : `https://${WF_HOST}`);
-const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://da.live')
+const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://da.live,https://markszulc.github.io')
   .split(',').map((s) => s.trim()).filter(Boolean);
 const AEM_ORIGIN = /^https:\/\/[a-z0-9-]+--[a-z0-9-]+--[a-z0-9-]+\.aem\.(page|live)$/;
 

@@ -111,6 +111,6 @@ The action only forwards `/attask/api/v*/…` to `WF_HOST`. It also strips `apiK
 
 - **Verify on your instance:** check that admin-key impersonation (`/login?username=`) is enabled, or that IMS passthrough works, and that each author's IMS email matches their Workfront username.
 - `proxy/workfront-proxy.mjs` is for development only. It passes the IMS token through, or uses a shared API key.
-- Both proxies only forward to `WF_HOST`, so they can't be used to reach other hosts (SSRF). CORS is limited to `localhost:3000`, `da.live` and `*--*--*.aem.page|live`.
+- Both proxies only forward to `WF_HOST`, so they can't be used to reach other hosts (SSRF). CORS is limited to `localhost:3000`, `da.live`, `markszulc.github.io` and `*--*--*.aem.page|live`.
 - The status picker only offers the built-in `NEW`, `INP` and `CPL`. Custom statuses aren't loaded yet.
 - "Complete" sets `status=CPL`. Tasks that need approval may need Workfront's approval flow instead.

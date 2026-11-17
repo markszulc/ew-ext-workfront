@@ -86,7 +86,7 @@ async function main(params, { fetchImpl = fetch } = {}) {
   const headers = params.__ow_headers || {};
   const method = (params.__ow_method || 'get').toUpperCase();
   const path = params.__ow_path || '';
-  const allowed = (params.ALLOWED_ORIGINS || 'http://localhost:3000,https://da.live')
+  const allowed = (params.ALLOWED_ORIGINS || 'http://localhost:3000,https://da.live,https://markszulc.github.io')
     .split(',').map((s) => s.trim()).filter(Boolean);
   const cors = corsHeaders(headers.origin, allowed);
 

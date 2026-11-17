@@ -24,7 +24,19 @@ A side-panel extension for [Experience Workspace](https://www.aem.live/docs/ew/d
 | [`proxy/workfront-proxy.mjs`](proxy/workfront-proxy.mjs) | Zero-dependency Node proxy for local development |
 | [`app-builder/`](app-builder/) | Production proxy as an Adobe App Builder web action |
 
-## Quick start
+## Try it now (GitHub Pages)
+
+The plugin is hosted at:
+
+**https://markszulc.github.io/ew-ext-workfront/tools/plugins/workfront/workfront.html**
+
+- Open it directly to see the UI in standalone demo mode.
+- To try it inside Experience Workspace, go to `https://da.live/config#/{org}/{site}/` and add a row to the **library** sheet with title `Workfront` and that URL as the path. Then open a page and choose **Workfront** in the side panel.
+- To use live data, add query parameters, e.g. `…/workfront.html?mode=proxy&proxyUrl=<proxy URL>`. Both proxies already allow `https://markszulc.github.io` (CORS).
+
+Every push to `main` redeploys the site within a minute or two.
+
+## Quick start (your own project)
 
 1. Copy `tools/plugins/workfront/` into your Edge Delivery Services project and run `aem up`.
 2. In `https://da.live/config#/{org}/{site}/`, add a row to the **library** sheet:
