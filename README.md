@@ -16,7 +16,7 @@ A side-panel extension for [Experience Workspace](https://www.aem.live/docs/ew/d
 - Filter to tasks for the page you have open: a task's Workfront **URL** is compared with the page path
 - Jump to a task's page: **Go to page** opens it in the editor when it isn't the page you have open
 - Create tasks in a project, optionally linked to the page you're editing
-- See the page's Experience Workspace comments and turn them into Workfront tasks
+- See the page's Experience Workspace comments and turn them into Workfront tasks (a reply with the task link is added to the comment)
 - Ask Coworker to help complete a task, using its name and description
 
 ## Repository layout

@@ -97,7 +97,7 @@ export function createMockClient({ readOnlyTaskIDs = ['t-5'] } = {}) {
 
   return {
     mode: 'demo',
-    taskUrl: () => null,
+    taskUrl: (id) => `https://demo.my.workfront.com/task/${id}/overview`,
 
     getCurrentUser: () => delay({
       ...ME,

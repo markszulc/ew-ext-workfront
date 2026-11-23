@@ -14,7 +14,9 @@ import {
   taskMatchesPage,
 } from './api.js';
 import { createMockClient } from './mock.js';
-import { demoComments, loadPageComments } from './comments.js';
+import {
+  commentAuthor, demoComments, loadPageComments, replyToComment,
+} from './comments.js';
 
 const SDK_TIMEOUT = 3000;
 const PAGE_ONLY_KEY = 'wf-panel:pageOnly';
@@ -487,9 +489,32 @@ function createTaskFromComment(thread) {
       ? `Replies:\n${thread.replies.map((r) => `${r.author?.name || 'Someone'}: ${r.body}`).join('\n')}`
       : '',
   ].filter(Boolean).join('\n\n');
-  state.draft = { name, description, commentId: thread.id };
+  state.draft = {
+    name, description, commentId: thread.id, docId: thread.docId,
+  };
   state.view = 'create';
   render();
+}
+
+/** Reply on the comment thread with a link to the new Workfront task. */
+async function replyWithTask(draft, task) {
+  if (!state.sdk?.token && state.config.mode !== 'demo') return;
+  const { org, repo, site } = state.context || {};
+  const url = state.client.taskUrl?.(task.ID);
+  const body = [`Workfront task created: ${task.name}`, url].filter(Boolean).join('\n');
+  try {
+    await replyToComment({
+      org,
+      site: site || repo,
+      docId: draft.docId,
+      threadId: draft.commentId,
+      body,
+      author: commentAuthor(state.sdk?.token, state.user),
+      token: state.sdk?.token,
+    });
+  } catch (e) {
+    toast(`Task created, but ${e.message.charAt(0).toLowerCase()}${e.message.slice(1)}`, 'error');
+  }
 }
 
 function renderComment(thread, linked) {
@@ -838,7 +863,10 @@ function renderCreateView() {
     btn.disabled = true;
     try {
       const created = await state.client.createTask(data);
-      if (draft.commentId) rememberCommentTask(draft.commentId, created.ID);
+      if (draft.commentId) {
+        rememberCommentTask(draft.commentId, created.ID);
+        await replyWithTask(draft, { ...created, name: created.name || name });
+      }
       state.draft = null;
       toast('Task created in Workfront', 'success');
       await openTask(created.ID);

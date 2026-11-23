@@ -1,11 +1,13 @@
 /*
- * Experience Workspace page comments (read-only).
+ * Experience Workspace page comments.
  *
  * Comments live next to the content as one JSON file per comment:
  *   HEAD https://admin.da.live/source/{org}/{site}{path}.html     → x-da-id: {docId}
  *   GET  https://admin.da.live/list/{org}/{site}/.da/comments/{docId}/
  *   GET  https://admin.da.live/source/{org}/{site}/.da/comments/{docId}/{commentId}.json
  * Root comments have threadId: null; replies carry their root's id as threadId.
+ * Replies are saved like the editor does: POST multipart `data` (JSON blob) to
+ *   https://admin.da.live/source/{org}/{site}/.da/comments/{docId}/{newId}.json
  */
 
 const DA_ADMIN = 'https://admin.da.live';
@@ -51,7 +53,50 @@ export async function loadPageComments({
       .then((c) => (c ? { id, ...c } : null))
       .catch(() => null);
   }));
-  return toThreads(comments.filter(Boolean));
+  return toThreads(comments.filter(Boolean)).map((t) => ({ ...t, docId }));
+}
+
+/** IMS user id from the access token (the editor uses it as comment author id). */
+function tokenUserId(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.user_id || payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Comment author in the editor's shape: { id, name, email }. */
+export function commentAuthor(token, user = {}) {
+  const email = user.emailAddr || user.email || '';
+  return {
+    id: tokenUserId(token) || email || 'workfront-panel',
+    name: user.name || email || 'Workfront panel',
+    email,
+  };
+}
+
+const demoReplies = [];
+
+/** Add a reply to a comment thread. Returns the saved reply. */
+export async function replyToComment({
+  org, site, docId, threadId, body, author, token, now = Date.now(),
+}) {
+  const id = crypto.randomUUID();
+  const reply = {
+    id, threadId, author, body, createdAt: now,
+  };
+  if (!token) {
+    demoReplies.push(reply);
+    return reply;
+  }
+  const form = new FormData();
+  form.append('data', new Blob([JSON.stringify(reply)], { type: 'application/json' }));
+  const resp = await daFetch(`${DA_ADMIN}/source/${org}/${site}/.da/comments/${docId}/${id}.json`, token, {
+    method: 'POST', body: form,
+  });
+  if (!resp.ok) throw new Error(`Couldn’t reply to the comment (${resp.status})`);
+  return reply;
 }
 
 /** Sample comments for demo / standalone mode. */
@@ -90,5 +135,6 @@ export function demoComments() {
       createdAt: ago(600),
       resolved: true,
     },
+    ...demoReplies,
   ]);
 }
