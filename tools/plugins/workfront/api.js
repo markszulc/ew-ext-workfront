@@ -289,8 +289,10 @@ export function createWorkfrontClient(config, { getToken } = {}) {
     searchProjects(query = '') {
       const params = {
         fields: 'name,status',
-        status: 'CUR',
-        $$LIMIT: 100,
+        // Any open project (Current, Planning, On Hold, Requested, custom…), not just Current.
+        status: ['CPL', 'DED', 'REJ'],
+        status_Mod: 'notin',
+        $$LIMIT: 200,
         name_Sort: 'asc',
       };
       if (query) {
