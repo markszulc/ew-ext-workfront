@@ -17,6 +17,9 @@ import { createMockClient } from './mock.js';
 
 const SDK_TIMEOUT = 3000;
 const PAGE_ONLY_KEY = 'wf-panel:pageOnly';
+// Task to reopen after "Go to page" reloads the panel on the new page.
+const RESUME_KEY = 'wf-panel:resume';
+const RESUME_TTL = 2 * 60 * 1000;
 const DEFAULTS = { mode: 'demo', host: 'markszulc.my.workfront.com', proxyUrl: '', apiVersion: 'v19.0' };
 const MODES = [
   { value: 'demo', label: 'Demo data (no Workfront connection)' },
@@ -190,16 +193,31 @@ function pageUrls() {
 
 // The Experience Workspace document a task's URL points at, if it isn't the one open now.
 function otherTaskPage(task) {
-  const { org, repo, site, path } = state.context || {};
+  const { org, repo, site } = state.context || {};
   const target = pageTarget(task?.URL, { org, site: site || repo });
-  if (!target) return null;
-  const same = target.org === org && target.site === (site || repo)
-    && pagePath(target.path) === pagePath(path);
-  return same ? null : target;
+  return target && !isCurrentPage(target) ? target : null;
 }
 
-function goToPage(target) {
+function isCurrentPage(target) {
+  const { org, repo, site, path } = state.context || {};
+  return target.org === org && target.site === (site || repo) && pagePath(target.path) === pagePath(path);
+}
+
+function takeResumeTask() {
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(RESUME_KEY));
+  } catch { /* ignore corrupt storage */ }
+  localStorage.removeItem(RESUME_KEY);
+  if (!saved?.taskID || Date.now() - saved.at > RESUME_TTL) return null;
+  return isCurrentPage(saved.target) ? saved.taskID : null;
+}
+
+function goToPage(target, task) {
   const hash = `/${target.org}/${target.site}${target.path}`;
+  if (task?.ID) {
+    localStorage.setItem(RESUME_KEY, JSON.stringify({ taskID: task.ID, target, at: Date.now() }));
+  }
   const { actions } = state.sdk || {};
   if (actions?.setHash) {
     actions.setHash(hash);
@@ -599,7 +617,7 @@ function renderDetailView() {
     otherPage ? button('Go to page', {
       class: 'primary outline',
       title: `Open ${otherPage.path} (${otherPage.org}/${otherPage.site}) in the editor`,
-      onClick: () => goToPage(otherPage),
+      onClick: () => goToPage(otherPage, task),
     }, 'edit') : null,
     url ? h('a', {
       class: 'wf-link-btn', href: url, target: '_blank', rel: 'noopener',
@@ -850,5 +868,7 @@ function render() {
     }
   }
   state.config = loadConfig();
+  const resumeID = takeResumeTask();
   await connect();
+  if (resumeID && state.view === 'list') await openTask(resumeID);
 }());
