@@ -14,12 +14,15 @@ import {
   taskMatchesPage,
 } from './api.js';
 import { createMockClient } from './mock.js';
+import { demoComments, loadPageComments } from './comments.js';
 
 const SDK_TIMEOUT = 3000;
 const PAGE_ONLY_KEY = 'wf-panel:pageOnly';
 // Task to reopen after "Go to page" reloads the panel on the new page.
 const RESUME_KEY = 'wf-panel:resume';
 const RESUME_TTL = 2 * 60 * 1000;
+// Experience Workspace comment id → Workfront task created from it.
+const COMMENT_TASKS_KEY = 'wf-panel:commentTasks';
 const DEFAULTS = { mode: 'demo', host: 'markszulc.my.workfront.com', proxyUrl: '', apiVersion: 'v19.0' };
 const MODES = [
   { value: 'demo', label: 'Demo data (no Workfront connection)' },
@@ -60,6 +63,7 @@ const state = {
   pageOnly: localStorage.getItem(PAGE_ONLY_KEY) === 'true',
   tasks: [],
   current: null,
+  draft: null,
   readOnly: new Set(),
   error: null,
 };
@@ -328,7 +332,7 @@ function renderHeader() {
     state.config?.mode === 'demo' ? h('span', { class: 'wf-badge' }, 'Demo') : null,
     h('span', { class: 'wf-spacer' }),
     user,
-    state.view === 'list' ? iconButton('refresh', 'Refresh', loadTasks) : null,
+    state.view === 'list' ? iconButton('refresh', 'Refresh', () => { loadTasks(); loadComments(); }) : null,
     iconButton('settings', 'Settings', () => { state.view = 'settings'; render(); }),
   );
 }
@@ -437,7 +441,108 @@ function renderListView() {
     pageToggle,
     !state.caps?.canEdit ? h('p', { class: 'wf-note' }, icon('lock'), 'Your Workfront access level is view-only for tasks.') : null,
     h('ul', { class: 'wf-list', id: 'wf-list', 'aria-busy': 'true', 'aria-label': 'Tasks' }, h('li', { class: 'wf-empty' }, 'Loading tasks…')),
+    currentPath() ? h('section', { class: 'wf-section wf-comments', id: 'wf-comments', hidden: true }) : null,
   ];
+}
+
+/* ---------- page comments ---------- */
+
+function commentTasks() {
+  try {
+    return JSON.parse(localStorage.getItem(COMMENT_TASKS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberCommentTask(commentId, taskID) {
+  localStorage.setItem(COMMENT_TASKS_KEY, JSON.stringify({ ...commentTasks(), [commentId]: taskID }));
+}
+
+function formatTime(ms) {
+  const d = new Date(ms);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
+function fetchComments() {
+  const { org, repo, site, path } = state.context || {};
+  if (state.sdk?.token) {
+    return loadPageComments({
+      org, site: site || repo, path, token: state.sdk.token,
+    });
+  }
+  return Promise.resolve(state.config.mode === 'demo' ? demoComments() : []);
+}
+
+function createTaskFromComment(thread) {
+  const firstLine = (thread.body || '').split('\n')[0].trim();
+  const name = firstLine.length > 120 ? `${firstLine.slice(0, 117)}…` : firstLine;
+  const description = [
+    thread.body,
+    thread.anchorText ? `On: “${thread.anchorText}”` : '',
+    `— ${thread.author?.name || 'Someone'}, ${formatTime(thread.createdAt)} (Experience Workspace comment)`,
+    thread.replies.length
+      ? `Replies:\n${thread.replies.map((r) => `${r.author?.name || 'Someone'}: ${r.body}`).join('\n')}`
+      : '',
+  ].filter(Boolean).join('\n\n');
+  state.draft = { name, description, commentId: thread.id };
+  state.view = 'create';
+  render();
+}
+
+function renderComment(thread, linked) {
+  const taskID = linked[thread.id];
+  let action = null;
+  if (taskID) {
+    action = h('button', {
+      type: 'button', class: 'wf-comment-link nx-action-btn-quiet', onClick: () => openTask(taskID),
+    }, icon('checkCircle'), 'Task created — view');
+  } else if (state.caps?.canCreate) {
+    action = button('Create task', { class: 'primary outline', onClick: () => createTaskFromComment(thread) }, 'add');
+  }
+  const replies = thread.replies.length;
+  return h(
+    'li',
+    { class: 'wf-comment' },
+    h('div', { class: 'wf-update-meta' }, `${thread.author?.name || 'Someone'} · ${formatTime(thread.createdAt)}`),
+    thread.anchorText ? h('blockquote', { class: 'wf-comment-quote' }, thread.anchorText) : null,
+    h('div', { class: 'wf-update-text' }, thread.body),
+    h(
+      'div',
+      { class: 'wf-comment-footer' },
+      replies ? h('span', { class: 'wf-comment-replies' }, `${replies} ${replies === 1 ? 'reply' : 'replies'}`) : null,
+      h('span', { class: 'wf-spacer' }),
+      action,
+    ),
+  );
+}
+
+async function loadComments() {
+  const section = document.getElementById('wf-comments');
+  if (!section) return;
+  let threads;
+  try {
+    threads = await fetchComments();
+  } catch (e) {
+    section.hidden = false;
+    section.replaceChildren(h('h3', {}, 'Page comments'), h('p', { class: 'wf-empty' }, e.message));
+    return;
+  }
+  if (!section.isConnected) return;
+  const open = threads.filter((t) => !t.resolved);
+  const resolved = threads.length - open.length;
+  section.hidden = !threads.length;
+  if (!threads.length) return;
+  const linked = commentTasks();
+  section.replaceChildren(
+    h('h3', {}, `Page comments (${open.length})`),
+    open.length
+      ? h('ul', { class: 'wf-updates wf-comment-list', 'aria-label': 'Page comments' }, open.map((t) => renderComment(t, linked)))
+      : h('p', { class: 'wf-empty' }, 'All comments on this page are resolved.'),
+    resolved ? h('p', { class: 'wf-comment-resolved' }, `${resolved} resolved ${resolved === 1 ? 'comment' : 'comments'} not shown.`) : null,
+  );
 }
 
 async function openTask(id) {
@@ -476,7 +581,12 @@ function backButton() {
   return h('button', {
     type: 'button',
     class: 'wf-back nx-action-btn-quiet',
-    onClick: () => { state.view = 'list'; render(); loadTasks(); },
+    onClick: () => {
+      state.draft = null;
+      state.view = 'list';
+      render();
+      loadTasks();
+    },
   }, icon('back'), 'Tasks');
 }
 
@@ -676,6 +786,7 @@ function renderDetailView() {
 }
 
 function renderCreateView() {
+  const draft = state.draft || {};
   // sl-select moves its <option>s into shadow DOM, so build a new one once projects arrive.
   const projectSlot = h('div', { class: 'wf-field' }, select('projectID', 'Project', [{ value: '', label: 'Loading projects…' }], '', { disabled: true }));
   state.client.searchProjects().then((projects) => {
@@ -692,7 +803,7 @@ function renderCreateView() {
   const form = h(
     'form',
     { class: 'wf-form' },
-    input('name', 'Task name', { required: true, maxlength: '255' }),
+    input('name', 'Task name', { required: true, maxlength: '255', value: draft.name || '' }),
     projectSlot,
     h(
       'div',
@@ -700,7 +811,7 @@ function renderCreateView() {
       input('plannedCompletionDate', 'Due date', { type: 'date' }),
       select('new-priority', 'Priority', PRIORITIES, 2),
     ),
-    textarea('description', 'Description', { rows: '5' }),
+    textarea('description', 'Description', { rows: '5', value: draft.description || '' }),
     links ? h('sl-checkbox', { name: 'linkPage', checked: true }, 'Link to the page I’m editing') : null,
     h('sl-checkbox', { name: 'assignMe', checked: true }, 'Assign to me'),
     h('div', { class: 'wf-actions' }, button('Create task', { type: 'submit' })),
@@ -727,6 +838,8 @@ function renderCreateView() {
     btn.disabled = true;
     try {
       const created = await state.client.createTask(data);
+      if (draft.commentId) rememberCommentTask(draft.commentId, created.ID);
+      state.draft = null;
       toast('Task created in Workfront', 'success');
       await openTask(created.ID);
     } catch (err) {
@@ -735,7 +848,11 @@ function renderCreateView() {
     }
   });
 
-  return [backButton(), h('h2', { class: 'wf-title' }, 'New task'), form];
+  return [
+    backButton(),
+    h('h2', { class: 'wf-title' }, draft.commentId ? 'New task from comment' : 'New task'),
+    form,
+  ];
 }
 
 function renderSettingsView() {
@@ -854,7 +971,10 @@ function render() {
     !state.sdk ? h('p', { class: 'wf-note wf-note-warn' }, 'Standalone mode: not connected to Experience Workspace.') : null,
     h('main', { class: `wf-body wf-view-${state.view}` }, views[state.view]()),
   ].filter(Boolean));
-  if (state.view === 'list') renderList();
+  if (state.view === 'list') {
+    renderList();
+    loadComments();
+  }
 }
 
 (async function init() {
