@@ -541,7 +541,7 @@ async function loadComments() {
     open.length
       ? h('ul', { class: 'wf-updates wf-comment-list', 'aria-label': 'Page comments' }, open.map((t) => renderComment(t, linked)))
       : h('p', { class: 'wf-empty' }, 'All comments on this page are resolved.'),
-    resolved ? h('p', { class: 'wf-comment-resolved' }, `${resolved} resolved ${resolved === 1 ? 'comment' : 'comments'} not shown.`) : null,
+    resolved ? h('p', { class: 'wf-comment-resolved' }, `${resolved} resolved ${resolved === 1 ? 'comment' : 'comments'} not shown.`) : '',
   );
 }
 
