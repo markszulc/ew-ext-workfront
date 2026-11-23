@@ -23,6 +23,7 @@ function task(id, name, project, extra = {}) {
     plannedStartDate: iso(-3),
     plannedCompletionDate: iso(5),
     lastUpdateDate: iso(-1),
+    URL: '',
     projectID: project.ID,
     project: { ID: project.ID, name: project.name },
     assignedToID: ME.ID,
@@ -41,6 +42,7 @@ export function createMockClient({ readOnlyTaskIDs = ['t-5'] } = {}) {
       percentComplete: 40,
       priority: 3,
       plannedCompletionDate: iso(-1),
+      URL: 'https://main--frescopa--demo.aem.page/spring',
     }),
     task('t-2', 'Select imagery for product detail pages', PROJECTS[2], {
       description: 'Pick 6 lifestyle shots from the DAM; check usage rights.',
@@ -51,9 +53,11 @@ export function createMockClient({ readOnlyTaskIDs = ['t-5'] } = {}) {
       percentComplete: 75,
       plannedCompletionDate: iso(7),
       priority: 1,
+      URL: 'https://da.live/edit#/demo/frescopa/coffee',
     }),
     task('t-4', 'Draft blog post: cold brew at home', PROJECTS[0], {
       description: '~400 words, casual tone, aimed at home baristas.',
+      URL: '/coffee.html',
       plannedCompletionDate: iso(10),
     }),
     task('t-5', 'Legal sign-off on sustainability claims', PROJECTS[2], {
@@ -105,11 +109,12 @@ export function createMockClient({ readOnlyTaskIDs = ['t-5'] } = {}) {
       },
     }),
 
-    searchTasks: ({ scope = 'mine', query = '' } = {}) => {
+    searchTasks: ({ scope = 'mine', query = '', urlContains = '' } = {}) => {
       let list = tasks.filter((t) => (scope === 'done' ? t.status === 'CPL' : t.status !== 'CPL'));
       if (scope === 'created') list = list.filter((t) => t.enteredBy.ID === ME.ID);
       else list = list.filter((t) => t.assignments.some((a) => a.assignedTo.ID === ME.ID));
       if (query) list = list.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()));
+      if (urlContains) list = list.filter((t) => (t.URL || '').toLowerCase().includes(urlContains.toLowerCase()));
       list.sort((a, b) => a.plannedCompletionDate.localeCompare(b.plannedCompletionDate));
       return delay(list);
     },
@@ -140,6 +145,7 @@ export function createMockClient({ readOnlyTaskIDs = ['t-5'] } = {}) {
       const assignee = data.assignedToID === ME.ID ? ME : null;
       const t = task(`t-${seq}`, data.name, p, {
         description: data.description || '',
+        URL: data.URL || '',
         priority: data.priority ?? 2,
         plannedCompletionDate: data.plannedCompletionDate || iso(7),
         assignedToID: assignee?.ID || null,

@@ -13,6 +13,7 @@ A side-panel extension for [Experience Workspace](https://www.aem.live/docs/ew/d
 - View task details and updates (comments)
 - Edit name, status, priority, progress, due date and description
 - Complete a task in one click
+- Filter to tasks for the page you have open: a task's Workfront **URL** is compared with the page path
 - Create tasks in a project, optionally linked to the page you're editing
 - Ask Coworker to help complete a task, using its name and description
 
@@ -33,6 +34,7 @@ The plugin is hosted at:
 - Open it directly to see the UI in standalone demo mode.
 - To try it inside Experience Workspace, go to `https://da.live/config#/{org}/{site}/` and add a row to the **library** sheet with title `Workfront` and that URL as the path. Then open a page and choose **Workfront** in the side panel.
 - To use live data, add query parameters, e.g. `…/workfront.html?mode=proxy&proxyUrl=<proxy URL>`. Both proxies already allow `https://markszulc.github.io` (CORS).
+- To try page filtering outside Experience Workspace, add `&org=<org>&site=<site>&path=/coffee`. In demo mode, three tasks are linked to `/coffee`.
 
 Every push to `main` redeploys the site within a minute or two.
 

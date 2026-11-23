@@ -10,10 +10,11 @@ Vanilla JS, no build step, no dependencies. It follows the
 | | |
 |---|---|
 | **Task list** | My open tasks / Requested by me / Completed (14 days), with search, status, due date (overdue in red), priority and progress |
-| **Details** | Name, status, priority, progress, due date, description, project, assignees, requester, and updates (comments) |
+| **Details** | Name, status, priority, progress, due date, page URL (with **Link to this page**), description, project, assignees, requester, and updates (comments) |
 | **Update** | Changes only the fields you edited (`PUT /task/{id}`) |
 | **Complete** | One click from the list or the details view (`status=CPL`, `percentComplete=100`) |
-| **Create** | Choose a project, set a due date and priority, assign the task to yourself, and optionally link the page you're editing |
+| **This page** | **Only tasks for this page** narrows the list to tasks whose Workfront `URL` field points at the page open in Experience Workspace. Only the path is compared, so preview (`aem.page`), live (`aem.live`), custom-domain and `da.live/edit#/…` URLs all match; `.html`, trailing `/` and `/index` are ignored. The setting is remembered. Outside Experience Workspace, pass `?org=…&site=…&path=…` to simulate a page |
+| **Create** | Choose a project, set a due date and priority, assign the task to yourself, and optionally link the page you're editing. Linking sets the task's `URL` to the page's preview URL and adds the links to the description |
 | **Permissions** | Uses your Workfront license and access level for tasks to hide edit and create actions. Workfront still has the final say: if it returns a 403, the task becomes 🔒 view-only |
 | **Ask Coworker** | Puts a prompt into Coworker (`actions.setPrompt`) asking it to help complete the task, using the task's name and description (including unsaved edits). You review it before sending |
 

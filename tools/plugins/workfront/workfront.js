@@ -6,13 +6,16 @@ import {
   createWorkfrontClient,
   deriveCapabilities,
   isOverdue,
+  pagePath,
   parseWfDate,
   PRIORITIES,
   STATUSES,
+  taskMatchesPage,
 } from './api.js';
 import { createMockClient } from './mock.js';
 
 const SDK_TIMEOUT = 3000;
+const PAGE_ONLY_KEY = 'wf-panel:pageOnly';
 const DEFAULTS = { mode: 'demo', host: 'markszulc.my.workfront.com', proxyUrl: '', apiVersion: 'v19.0' };
 const MODES = [
   { value: 'demo', label: 'Demo data (no Workfront connection)' },
@@ -49,6 +52,7 @@ const state = {
   view: 'loading',
   scope: 'mine',
   query: '',
+  pageOnly: localStorage.getItem(PAGE_ONLY_KEY) === 'true',
   tasks: [],
   current: null,
   readOnly: new Set(),
@@ -167,15 +171,24 @@ function handleError(e, task) {
   return false;
 }
 
-function pageLinks() {
+function currentPath() {
+  return state.context?.path || null;
+}
+
+function pageUrls() {
   const { org, repo, site, path } = state.context || {};
   const siteName = site || repo;
-  if (!org || !siteName || !path) return '';
+  if (!org || !siteName || !path) return null;
   const p = path.startsWith('/') ? path : `/${path}`;
-  return [
-    `Related page: https://da.live/edit#/${org}/${siteName}${p}`,
-    `Preview: https://main--${siteName}--${org}.aem.page${p.replace(/\.html$/, '')}`,
-  ].join('\n');
+  return {
+    edit: `https://da.live/edit#/${org}/${siteName}${p}`,
+    preview: `https://main--${siteName}--${org}.aem.page${p.replace(/\.html$/, '')}`,
+  };
+}
+
+function pageLinks() {
+  const urls = pageUrls();
+  return urls ? `Related page: ${urls.edit}\nPreview: ${urls.preview}` : '';
 }
 
 /* ---------- config & connection ---------- */
@@ -224,7 +237,13 @@ async function loadTasks() {
   const listEl = document.getElementById('wf-list');
   if (listEl) listEl.setAttribute('aria-busy', 'true');
   try {
-    state.tasks = await state.client.searchTasks({ scope: state.scope, query: state.query });
+    const path = state.pageOnly ? pagePath(currentPath()) : null;
+    const tasks = await state.client.searchTasks({
+      scope: state.scope,
+      query: state.query,
+      urlContains: path && path !== '/' ? path : '',
+    });
+    state.tasks = path ? tasks.filter((t) => taskMatchesPage(t, path)) : tasks;
   } catch (e) {
     state.tasks = [];
     handleError(e);
@@ -325,7 +344,10 @@ function renderList() {
   listEl.removeAttribute('aria-busy');
   listEl.replaceChildren();
   if (!state.tasks.length) {
-    listEl.append(h('li', { class: 'wf-empty' }, state.query ? 'No tasks match your search.' : 'Nothing here — enjoy the calm.'));
+    let msg = 'Nothing here — enjoy the calm.';
+    if (state.query) msg = 'No tasks match your search.';
+    else if (state.pageOnly && currentPath()) msg = 'No tasks are linked to this page. Set a task’s Page URL to link it.';
+    listEl.append(h('li', { class: 'wf-empty' }, msg));
     return;
   }
   listEl.append(...state.tasks.map(renderTaskCard));
@@ -353,9 +375,23 @@ function renderListView() {
     ? button('New task', { onClick: () => { state.view = 'create'; render(); } }, 'add')
     : null;
 
+  const path = currentPath();
+  const pageToggle = path ? h('sl-checkbox', {
+    name: 'pageOnly',
+    class: 'wf-page-only',
+    checked: state.pageOnly,
+    title: `Show tasks whose URL points to ${path}`,
+    onChange: (e) => {
+      state.pageOnly = !!e.target.checked;
+      localStorage.setItem(PAGE_ONLY_KEY, String(state.pageOnly));
+      loadTasks();
+    },
+  }, `Only tasks for this page (${pagePath(path)})`) : null;
+
   return [
     h('div', { class: 'wf-toolbar' }, scope, newBtn),
     search,
+    pageToggle,
     !state.caps?.canEdit ? h('p', { class: 'wf-note' }, icon('lock'), 'Your Workfront access level is view-only for tasks.') : null,
     h('ul', { class: 'wf-list', id: 'wf-list', 'aria-busy': 'true', 'aria-label': 'Tasks' }, h('li', { class: 'wf-empty' }, 'Loading tasks…')),
   ];
@@ -414,6 +450,21 @@ function renderDetailView() {
   const pctOut = h('output', { for: 'percentComplete' }, `${task.percentComplete || 0}%`);
   const saveBtn = button('Save changes', { type: 'submit', disabled: true });
   const off = !editable;
+  const page = pageUrls();
+  const urlInput = input('URL', 'Page URL', {
+    inputmode: 'url', value: task.URL || '', disabled: off, placeholder: 'https://… page this task is about',
+  });
+  const linkBtn = editable && page && !taskMatchesPage(task, currentPath())
+    ? h('button', {
+      type: 'button',
+      class: 'wf-link-page nx-action-btn-quiet',
+      onClick: (e) => {
+        urlInput.value = page.preview;
+        e.currentTarget.remove();
+        form.dispatchEvent(new Event('input'));
+      },
+    }, 'Link to this page')
+    : null;
 
   form.append(
     input('name', 'Name', { required: true, value: task.name, disabled: off }),
@@ -440,6 +491,7 @@ function renderDetailView() {
       ),
     ),
     input('plannedCompletionDate', 'Due date', { type: 'date', value: toDateInput(task.plannedCompletionDate), disabled: off }),
+    h('div', { class: 'wf-url-field' }, urlInput, linkBtn),
     textarea('description', 'Description', { rows: '5', value: task.description || '', disabled: off }),
     editable ? h('div', { class: 'wf-actions' }, saveBtn) : null,
   );
@@ -453,6 +505,7 @@ function renderDetailView() {
       percentComplete: Number(fd.get('percentComplete')),
       plannedCompletionDate: fd.get('plannedCompletionDate') || null,
       description: fd.get('description') ?? '',
+      URL: (urlInput.value || '').trim(),
     };
   };
   const original = {
@@ -462,6 +515,7 @@ function renderDetailView() {
     percentComplete: Number(task.percentComplete || 0),
     plannedCompletionDate: toDateInput(task.plannedCompletionDate) || null,
     description: task.description || '',
+    URL: task.URL || '',
   };
   const diff = () => {
     const now = readValues();
@@ -618,6 +672,7 @@ function renderCreateView() {
     };
     if (fd.get('plannedCompletionDate')) data.plannedCompletionDate = fd.get('plannedCompletionDate');
     if (fd.get('assignMe') && state.user?.ID) data.assignedToID = state.user.ID;
+    if (links && fd.get('linkPage')) data.URL = pageUrls().preview;
 
     const btn = form.querySelector('[type=submit]');
     btn.disabled = true;
@@ -756,6 +811,13 @@ function render() {
 (async function init() {
   state.sdk = await connectSdk();
   state.context = state.sdk?.context || null;
+  if (!state.context) {
+    // Standalone testing: ?org=…&site=…&path=… stands in for the Experience Workspace page.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('path')) {
+      state.context = { org: params.get('org'), site: params.get('site'), path: params.get('path') };
+    }
+  }
   state.config = loadConfig();
   await connect();
 }());

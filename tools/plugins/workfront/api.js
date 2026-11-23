@@ -25,7 +25,39 @@ export const TASK_FIELDS = [
   'assignedTo:name',
   'enteredBy:name',
   'assignments:assignedTo:name',
+  'URL',
 ].join(',');
+
+/**
+ * Reduce a page URL or path to a comparable key, e.g.
+ *   https://main--site--org.aem.page/en/Coffee.html → /en/coffee
+ *   https://da.live/edit#/org/site/en/coffee        → /en/coffee
+ *   /en/index                                       → /en
+ * Host, query and extension are ignored so preview, live, custom-domain and editor
+ * URLs for the same page all match. Returns null for empty or unparseable values.
+ */
+export function pagePath(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  let p;
+  try {
+    const u = new URL(raw, 'https://page.invalid');
+    // da.live editor URLs carry /org/site/path in the hash.
+    p = /(^|\.)da\.live$/.test(u.hostname) && /^#\/[^/]+\/[^/]+/.test(u.hash)
+      ? u.hash.slice(1).split('/').slice(3).join('/')
+      : u.pathname;
+  } catch {
+    return null;
+  }
+  try { p = decodeURIComponent(p); } catch { /* keep encoded */ }
+  p = p.toLowerCase().replace(/\.(html|md|json)$/, '').replace(/\/+$/, '').replace(/(^|\/)index$/, '');
+  return p.startsWith('/') ? p : `/${p}`;
+}
+
+export function taskMatchesPage(task, path) {
+  const want = pagePath(path);
+  return !!want && pagePath(task?.URL) === want;
+}
 
 export const STATUSES = [
   { value: 'NEW', label: 'New' },
@@ -171,7 +203,9 @@ export function createWorkfrontClient(config, { getToken } = {}) {
       return Array.isArray(data) ? data[0] : data;
     },
 
-    async searchTasks({ scope = 'mine', query = '', limit = 50 } = {}) {
+    async searchTasks({
+      scope = 'mine', query = '', urlContains = '', limit = 50,
+    } = {}) {
       const params = {
         fields: TASK_FIELDS,
         $$LIMIT: limit,
@@ -192,6 +226,11 @@ export function createWorkfrontClient(config, { getToken } = {}) {
       if (query) {
         params.name = query;
         params.name_Mod = 'cicontains';
+      }
+      // Coarse server-side narrowing; callers do the exact path match.
+      if (urlContains) {
+        params.URL = urlContains;
+        params.URL_Mod = 'cicontains';
       }
       return request('task/search', { params });
     },

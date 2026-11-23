@@ -199,6 +199,23 @@ sl-input { min-width: 0; }
 
 .wf-scope { flex: 1; }
 
+.wf-page-only { font-size: var(--s2-body-size-s); }
+
+.wf-url-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2-spacing-50);
+}
+
+.wf-link-page {
+  align-self: flex-start;
+  height: 24px;
+  margin-left: calc(-1 * var(--s2-spacing-100));
+  padding: 0 var(--s2-spacing-100);
+  font-size: var(--s2-body-size-xs);
+  color: var(--s2-blue-900);
+}
+
 .wf-list {
   display: flex;
   flex-direction: column;
