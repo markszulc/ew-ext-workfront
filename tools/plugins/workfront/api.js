@@ -59,6 +59,37 @@ export function taskMatchesPage(task, path) {
   return !!want && pagePath(task?.URL) === want;
 }
 
+/**
+ * Work out which Experience Workspace document a task URL points at, as { org, site, path }
+ * where path has no extension (…/ becomes …/index). org/site come from da.live editor URLs or
+ * {ref}--{site}--{org}.aem.page|live hosts; otherwise (custom domains, bare paths) from fallback.
+ */
+export function pageTarget(value, fallback = {}) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  let { org, site } = fallback;
+  let p;
+  try {
+    const u = new URL(raw, 'https://page.invalid');
+    if (/(^|\.)da\.live$/.test(u.hostname) && /^#\/[^/]+\/[^/]+/.test(u.hash)) {
+      const parts = u.hash.slice(1).split('/');
+      [, org, site] = parts;
+      p = `/${parts.slice(3).join('/')}`;
+    } else {
+      const aem = u.hostname.match(/^[a-z0-9-]+?--([a-z0-9-]+?)--([a-z0-9-]+)\.aem\.(page|live)$/i);
+      if (aem) [, site, org] = aem;
+      p = u.pathname;
+    }
+  } catch {
+    return null;
+  }
+  try { p = decodeURIComponent(p); } catch { /* keep encoded */ }
+  p = p.replace(/\.(html|md)$/, '');
+  if (p.endsWith('/')) p += 'index';
+  if (!org || !site) return null;
+  return { org, site, path: p };
+}
+
 export const STATUSES = [
   { value: 'NEW', label: 'New' },
   { value: 'INP', label: 'In Progress' },

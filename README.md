@@ -14,6 +14,7 @@ A side-panel extension for [Experience Workspace](https://www.aem.live/docs/ew/d
 - Edit name, status, priority, progress, due date and description
 - Complete a task in one click
 - Filter to tasks for the page you have open: a task's Workfront **URL** is compared with the page path
+- Jump to a task's page: **Go to page** opens it in the editor when it isn't the page you have open
 - Create tasks in a project, optionally linked to the page you're editing
 - Ask Coworker to help complete a task, using its name and description
 

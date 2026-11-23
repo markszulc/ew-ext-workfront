@@ -7,6 +7,7 @@ import {
   deriveCapabilities,
   isOverdue,
   pagePath,
+  pageTarget,
   parseWfDate,
   PRIORITIES,
   STATUSES,
@@ -30,6 +31,7 @@ const ICONS = {
   settings: `${NX_ICONS}/S2_Icon_Properties_20_N.svg`,
   lock: `${NX_ICONS}/S2_Icon_Lock_20_N.svg`,
   openIn: `${NX_ICONS}/S2_Icon_OpenIn_20_N.svg`,
+  edit: `${NX_ICONS}/S2_Icon_Edit_20_N.svg`,
   check: `${NX_ICONS}/S2_Icon_Checkmark_20_N.svg`,
   checkCircle: `${NX_ICONS}/S2_Icon_CheckmarkCircle_20_N.svg`,
   alert: `${NX_ICONS}/S2_Icon_AlertDiamond_20_N.svg`,
@@ -184,6 +186,29 @@ function pageUrls() {
     edit: `https://da.live/edit#/${org}/${siteName}${p}`,
     preview: `https://main--${siteName}--${org}.aem.page${p.replace(/\.html$/, '')}`,
   };
+}
+
+// The Experience Workspace document a task's URL points at, if it isn't the one open now.
+function otherTaskPage(task) {
+  const { org, repo, site, path } = state.context || {};
+  const target = pageTarget(task?.URL, { org, site: site || repo });
+  if (!target) return null;
+  const same = target.org === org && target.site === (site || repo)
+    && pagePath(target.path) === pagePath(path);
+  return same ? null : target;
+}
+
+function goToPage(target) {
+  const hash = `/${target.org}/${target.site}${target.path}`;
+  const { actions } = state.sdk || {};
+  if (actions?.setHash) {
+    actions.setHash(hash);
+    // The editor may keep this panel open, so track the new page ourselves.
+    state.context = { ...state.context, org: target.org, site: target.site, path: target.path };
+    render();
+  } else {
+    window.open(`https://da.live/edit#${hash}`, '_blank', 'noopener');
+  }
 }
 
 function pageLinks() {
@@ -451,6 +476,7 @@ function renderDetailView() {
   const saveBtn = button('Save changes', { type: 'submit', disabled: true });
   const off = !editable;
   const page = pageUrls();
+  const otherPage = otherTaskPage(task);
   const urlInput = input('URL', 'Page URL', {
     inputmode: 'url', value: task.URL || '', disabled: off, placeholder: 'https://… page this task is about',
   });
@@ -570,6 +596,11 @@ function renderDetailView() {
         toast('Sent to Coworker — review and press send.', 'success');
       },
     }, 'assistant') : null,
+    otherPage ? button('Go to page', {
+      class: 'primary outline',
+      title: `Open ${otherPage.path} (${otherPage.org}/${otherPage.site}) in the editor`,
+      onClick: () => goToPage(otherPage),
+    }, 'edit') : null,
     url ? h('a', {
       class: 'wf-link-btn', href: url, target: '_blank', rel: 'noopener',
     }, icon('openIn'), 'Open in Workfront') : null,
